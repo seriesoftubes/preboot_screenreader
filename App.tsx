@@ -3,7 +3,6 @@ import { StyleSheet, Text, View, Dimensions, Platform } from 'react-native';
 import { Camera } from 'expo-camera';
 import * as tf from '@tensorflow/tfjs';
 import { bundleResourceIO, cameraWithTensors } from '@tensorflow/tfjs-react-native';
-import { GraphModel, Tensor } from '@tensorflow/tfjs';
 
 // Disable logs on EXPO client!
 import { LogBox } from 'react-native';
@@ -16,7 +15,7 @@ export default function App() {
 
   //  Tensor Camera
   const TensorCamera = cameraWithTensors(Camera);
-  let requestAnimationFrameID = 0;
+  let requestAnimationFrameId = 0;
 
   // Screen Ratio
   const { height, width } = Dimensions.get('window');
@@ -25,16 +24,26 @@ export default function App() {
   const cameraWidth = width;
   const cameraHeight = (4 / 3) * width;
 
-  // Tensorflow and Permissions
   // Check model state
-  const [model, setModel] = useState<GraphModel | null>(null);
+  const [model, setModel] = useState<tf.GraphModel | null>(null);
   const [frameworkReady, setFrameworkReady] = useState(false);
 
   // Performance hacks (Platform dependent)
   const textureDims = Platform.OS === "ios"? { width: 1080, height: 1920 } : { width: 1600, height: 1200 };
   const tensorDims = { width: 180, height: 180 };
 
+  // Prediction
   const [prediction, setPrediction] = useState<String | undefined>('');
+
+  // Import model.json and model weights
+  const modelJson = require('./assets/model/model.json');
+  const modelWeights1: number = require('./assets/model/group1-shard1of4.bin');
+  const modelWeights2: number = require('./assets/model/group1-shard2of4.bin');
+  const modelWeights3: number = require('./assets/model/group1-shard3of4.bin');
+  const modelWeights4: number = require('./assets/model/group1-shard4of4.bin');
+
+  // Screen class names 
+  const classNames = ['BIOS SCREEN', 'BOOT SCREEN'];
 
   // -----------------------------
   // Initialize
@@ -63,46 +72,48 @@ export default function App() {
     }
   }, []);
 
+  //--------------------------
+  // Run onUnmount routine
+  // for cancelling animation 
+  // (if running) to avoid leaks
+  //--------------------------
   useEffect(() => {
-    if (requestAnimationFrameID) {
-      cancelAnimationFrame(requestAnimationFrameID);
-    }
-  }, []);
+    return () => {
+      cancelAnimationFrame(requestAnimationFrameId);
+    };
+  }, [requestAnimationFrameId]);
 
   const loadModel = async () => {
-    const modelJSON = await require('./assets/model/model.json');
-    const modelWeights = await require('./assets/model/group1-shard.bin');
-    const model = await tf.loadGraphModel(bundleResourceIO(modelJSON, modelWeights));
+    
+    const model = await tf.loadGraphModel(bundleResourceIO(
+      modelJson, [modelWeights1, modelWeights2, modelWeights3, modelWeights4]));
     
     return model;
   }
 
-  const getPrediction = async (tensor: Tensor) => {
+  const getPrediction = async (tensor: tf.Tensor3D) => {
     if (!tensor) { return '' }
     if (!model) { return '' }
 
-    // Get probabilities
-    const output = model.predict(tensor.expandDims(0).toFloat()) as Tensor;
-    console.log(output.dataSync());
-    
-    const predictions = Array.from(output.argMax(1).dataSync())
-    console.log(predictions);
-
     var className = '';
 
-    if (predictions[0] == 1)
-    {
-      className = 'BIOS_SCREEN'
+    // Get prediction
+    const input = tensor.expandDims(0).toFloat();
+    const predictions = model.predict(input) as tf.Tensor;
+    const scores = tf.softmax(predictions).dataSync();
+
+    // Check if probability is more than 90%
+    const probability = Number(tf.max(scores).dataSync());
+    if (probability > 0.9) {
+      className = classNames[Number(tf.argMax(scores).dataSync())];
+      console.log(className);
+      console.log('CONFIDENCE: ', 100 * Number(tf.max(scores).dataSync()));
     }
-    else if (predictions[0] == 2)
-    {
-      className = 'BOOT_SCREEN'
+    else {
+      className = 'SCREEN NOT DETECTED'
     }
-    else
-    {
-      className = 'NONE'
-    }
-    console.log(className);
+
+    cancelAnimationFrame(requestAnimationFrameId);
     
     return className;
   }
@@ -111,10 +122,11 @@ export default function App() {
     const loop = async () => {
       const nextImageTensor = await imageAsTensors.next().value;
       setPrediction(await getPrediction(nextImageTensor));
-      
-      requestAnimationFrame(loop);
+      requestAnimationFrameId = requestAnimationFrame(loop);
     };
-    loop();
+    setTimeout(() => {
+      loop();
+    }, 5000);
   }
 
   if (hasPermission === null) {
