@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
-import 'package:image/image.dart' as imglib;
+
+import 'package:tflite/tflite.dart';
 
 import 'package:preboot_screenreader/components/classifier.dart';
-import 'package:preboot_screenreader/components/image_converter.dart';
 
 class CameraFeed extends StatefulWidget {
   @override
@@ -44,11 +44,29 @@ class _CameraFeedState extends State<CameraFeed> {
     if (mounted) {
       setState(() {});
 
-      cameraController.startImageStream((CameraImage camImg) {
+      cameraController.startImageStream((CameraImage img) {
         if (!isDetecting) {
           isDetecting = true;
-          imglib.Image img = convertCameraImage(camImg);
-          _classifier.classify(img);
+          //imglib.Image img = convertCameraImage(camImg);
+          //_classifier.classify(img);
+          print('PREDICTING...');
+          Tflite.runModelOnFrame(
+                  bytesList: img.planes.map((plane) {
+                    return plane.bytes;
+                  }).toList(), // required
+                  imageHeight: img.height,
+                  imageWidth: img.width,
+                  imageMean: 127.5, // defaults to 127.5
+                  imageStd: 127.5, // defaults to 127.5
+                  rotation: 90, // defaults to 90, Android only
+                  numResults: 1, // defaults to 5
+                  threshold: 0.1, // defaults to 0.1
+                  asynch: true // defaults to true
+                  )
+              .then((recognition) {
+            print('RECOGNITION:');
+            print(recognition);
+          });
           isDetecting = false;
         }
       });
