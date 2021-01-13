@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
-
 import 'package:tflite/tflite.dart';
 
 import 'classifier.dart';
@@ -14,6 +13,7 @@ class _CameraFeedState extends State<CameraFeed> {
   Classifier _classifier;
   CameraController cameraController;
   bool isDetecting = false;
+  String _prediction;
 
   Future initCamera(CameraDescription cameraDescription) async {
     if (cameraController != null) {
@@ -22,12 +22,6 @@ class _CameraFeedState extends State<CameraFeed> {
 
     cameraController =
         CameraController(cameraDescription, ResolutionPreset.medium);
-
-    // cameraController.addListener(() {
-    //   if (mounted) {
-    //     setState(() {});
-    //   }
-    // });
 
     if (cameraController.value.hasError) {
       print('Camera Error ${cameraController.value.errorDescription}');
@@ -61,6 +55,15 @@ class _CameraFeedState extends State<CameraFeed> {
     );
   }
 
+  // Display prediction text
+  Widget predictionText() {
+    return Text(
+      'Screen class: $_prediction',
+      style: TextStyle(
+          color: Colors.white, fontSize: 20.0, fontWeight: FontWeight.bold),
+    );
+  }
+
   @override
   void initState() {
     super.initState();
@@ -69,6 +72,7 @@ class _CameraFeedState extends State<CameraFeed> {
 
   @override
   void dispose() {
+    Tflite.close();
     super.dispose();
     if (cameraController != null) {
       cameraController.stopImageStream();
@@ -86,6 +90,10 @@ class _CameraFeedState extends State<CameraFeed> {
           Align(
             alignment: Alignment.center,
             child: cameraPreview(),
+          ),
+          Align(
+            alignment: Alignment.bottomCenter,
+            child: predictionText(),
           ),
         ]),
       ),
@@ -111,27 +119,11 @@ class _CameraFeedState extends State<CameraFeed> {
     if (isDetecting) return;
     isDetecting = true;
 
-    //imglib.Image img = convertCameraImage(camImg);
-    // await _classifier.classify(img);
-    print('PREDICTING...');
-    try {
-      final recognition = await Tflite.runModelOnFrame(
-        bytesList: img.planes.map((plane) {
-          return plane.bytes;
-        }).toList(), // required
-        imageHeight: img.height,
-        imageWidth: img.width,
-        imageMean: 127.5, // defaults to 127.5
-        imageStd: 127.5, // defaults to 127.5
-        rotation: 90, // defaults to 90, Android only
-        numResults: 1, // defaults to 5
-        threshold: 0.1, // defaults to 0.1
-        asynch: true, // defaults to true
-      );
-      print('RECOGNITION: $recognition');
-    } catch (e) {
-      print('erro $e');
-    }
+    var prediction = await _classifier.classify(img);
+
+    setState(() {
+      _prediction = prediction;
+    });
 
     isDetecting = false;
   }
