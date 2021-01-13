@@ -1,5 +1,7 @@
+import 'dart:ffi';
 import 'dart:math';
 
+import 'package:camera/camera.dart';
 import 'package:tflite/tflite.dart';
 
 class Classifier {
@@ -9,6 +11,10 @@ class Classifier {
 
   Classifier() {
     // Load model when the classifier is initialized.
+    _loadModel();
+  }
+
+  void _loadModel() {
     try {
       Tflite.loadModel(
           model: _modelFile,
@@ -21,6 +27,37 @@ class Classifier {
           );
     } catch (e) {
       print(e);
+    }
+  }
+
+  Future<String> classify(CameraImage img) async {
+    try {
+      final recognition = await Tflite.runModelOnFrame(
+        bytesList: img.planes.map((plane) {
+          return plane.bytes;
+        }).toList(), // required
+        imageHeight: img.height,
+        imageWidth: img.width,
+        imageMean: 127.5, // defaults to 127.5
+        imageStd: 127.5, // defaults to 127.5
+        rotation: 90, // defaults to 90, Android only
+        numResults: 1, // defaults to 5
+        threshold: 0.1, // defaults to 0.1
+        asynch: true, // defaults to true
+      );
+
+      double probability = 1 / (1 + exp(-1 * recognition[0]["confidence"]));
+      print('RECOGNITION: $recognition PROBABILITY: $probability');
+
+      // Check if probability is at least 90%
+      if (probability >= 0.9) {
+        return recognition[0]["label"];
+      } else {
+        return "None";
+      }
+    } catch (e) {
+      print('Error: $e');
+      return null;
     }
   }
 }
