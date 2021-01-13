@@ -3,7 +3,7 @@ import 'package:camera/camera.dart';
 
 import 'package:tflite/tflite.dart';
 
-import 'package:preboot_screenreader/components/classifier.dart';
+import 'classifier.dart';
 
 class CameraFeed extends StatefulWidget {
   @override
@@ -13,8 +13,6 @@ class CameraFeed extends StatefulWidget {
 class _CameraFeedState extends State<CameraFeed> {
   Classifier _classifier;
   CameraController cameraController;
-  List cameras;
-  int selectedCameraIndex;
   bool isDetecting = false;
 
   Future initCamera(CameraDescription cameraDescription) async {
@@ -23,13 +21,13 @@ class _CameraFeedState extends State<CameraFeed> {
     }
 
     cameraController =
-        CameraController(cameraDescription, ResolutionPreset.high);
+        CameraController(cameraDescription, ResolutionPreset.medium);
 
-    cameraController.addListener(() {
-      if (mounted) {
-        setState(() {});
-      }
-    });
+    // cameraController.addListener(() {
+    //   if (mounted) {
+    //     setState(() {});
+    //   }
+    // });
 
     if (cameraController.value.hasError) {
       print('Camera Error ${cameraController.value.errorDescription}');
@@ -41,36 +39,10 @@ class _CameraFeedState extends State<CameraFeed> {
       print('Error ${e.code} \nError message: ${e.description}');
     }
 
-    if (mounted) {
-      setState(() {});
+    if (!mounted) return;
+    cameraController.startImageStream(_onImageAvailable);
 
-      cameraController.startImageStream((CameraImage img) {
-        if (!isDetecting) {
-          isDetecting = true;
-          //imglib.Image img = convertCameraImage(camImg);
-          //_classifier.classify(img);
-          print('PREDICTING...');
-          Tflite.runModelOnFrame(
-                  bytesList: img.planes.map((plane) {
-                    return plane.bytes;
-                  }).toList(), // required
-                  imageHeight: img.height,
-                  imageWidth: img.width,
-                  imageMean: 127.5, // defaults to 127.5
-                  imageStd: 127.5, // defaults to 127.5
-                  rotation: 90, // defaults to 90, Android only
-                  numResults: 1, // defaults to 5
-                  threshold: 0.1, // defaults to 0.1
-                  asynch: true // defaults to true
-                  )
-              .then((recognition) {
-            print('RECOGNITION:');
-            print(recognition);
-          });
-          isDetecting = false;
-        }
-      });
-    }
+    setState(() {});
   }
 
   // Display camera preview
@@ -91,24 +63,18 @@ class _CameraFeedState extends State<CameraFeed> {
 
   @override
   void initState() {
-    // TODO: implement initState
     super.initState();
-    // Initialize classifier
-    _classifier = Classifier();
-    // Check whether camera is available
-    availableCameras().then((value) {
-      cameras = value;
-      if (cameras.length > 0) {
-        setState(() {
-          selectedCameraIndex = 0;
-        });
-        initCamera(cameras[selectedCameraIndex]).then((value) {});
-      } else {
-        print('No camera available');
-      }
-    }).catchError((e) {
-      print('Error : ${e.code}');
-    });
+    _init();
+  }
+
+  @override
+  void dispose() {
+    super.dispose();
+    if (cameraController != null) {
+      cameraController.stopImageStream();
+      cameraController.dispose();
+      cameraController = null;
+    }
   }
 
   @override
@@ -124,5 +90,49 @@ class _CameraFeedState extends State<CameraFeed> {
         ]),
       ),
     );
+  }
+
+  /// Initializes the camera views choosing the first camera available.
+  void _init() async {
+    _classifier = Classifier(); // loads the model.
+    try {
+      final cameras = await availableCameras();
+      if (cameras?.isNotEmpty ?? false) {
+        await initCamera(cameras.first);
+      } else {
+        print('No camera available');
+      }
+    } catch (e) {
+      print('Error : ${e.code}');
+    }
+  }
+
+  void _onImageAvailable(CameraImage img) async {
+    if (isDetecting) return;
+    isDetecting = true;
+
+    //imglib.Image img = convertCameraImage(camImg);
+    // await _classifier.classify(img);
+    print('PREDICTING...');
+    try {
+      final recognition = await Tflite.runModelOnFrame(
+        bytesList: img.planes.map((plane) {
+          return plane.bytes;
+        }).toList(), // required
+        imageHeight: img.height,
+        imageWidth: img.width,
+        imageMean: 127.5, // defaults to 127.5
+        imageStd: 127.5, // defaults to 127.5
+        rotation: 90, // defaults to 90, Android only
+        numResults: 1, // defaults to 5
+        threshold: 0.1, // defaults to 0.1
+        asynch: true, // defaults to true
+      );
+      print('RECOGNITION: $recognition');
+    } catch (e) {
+      print('erro $e');
+    }
+
+    isDetecting = false;
   }
 }
