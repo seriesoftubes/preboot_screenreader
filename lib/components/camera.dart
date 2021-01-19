@@ -13,7 +13,7 @@ class _CameraFeedState extends State<CameraFeed> {
   Classifier _classifier;
   CameraController cameraController;
   bool isDetecting = false;
-  String _prediction;
+  String _prediction = "None";
 
   Future initCamera(CameraDescription cameraDescription) async {
     if (cameraController != null) {

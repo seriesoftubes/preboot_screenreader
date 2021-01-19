@@ -1,4 +1,3 @@
-import 'dart:ffi';
 import 'dart:math';
 
 import 'package:camera/camera.dart';
@@ -19,11 +18,11 @@ class Classifier {
       Tflite.loadModel(
           model: _modelFile,
           labels: _labelFile,
-          numThreads: 1, // defaults to 1
+          numThreads: 4, // defaults to 1
           isAsset:
               true, // defaults to true, set to false to load resources outside assets
           useGpuDelegate:
-              false // defaults to false, set to true to use GPU delegate
+              true // defaults to false, set to true to use GPU delegate
           );
     } catch (e) {
       print(e);
@@ -38,8 +37,8 @@ class Classifier {
         }).toList(), // required
         imageHeight: img.height,
         imageWidth: img.width,
-        imageMean: 127.5, // defaults to 127.5
-        imageStd: 127.5, // defaults to 127.5
+        imageMean: 0.0, // defaults to 127.5
+        imageStd: 1.0, // defaults to 127.5
         rotation: 90, // defaults to 90, Android only
         numResults: 1, // defaults to 5
         threshold: 0.1, // defaults to 0.1
@@ -47,17 +46,22 @@ class Classifier {
       );
 
       double probability = 1 / (1 + exp(-1 * recognition[0]["confidence"]));
+      String className = recognition[0]["label"];
       print('RECOGNITION: $recognition PROBABILITY: $probability');
 
-      // Check if probability is at least 90%
-      if (probability >= 0.9) {
-        return recognition[0]["label"];
+      // Check if probability condition
+      if (probability >= 0.75 &&
+          probability <= 0.97 &&
+          className == "BOOT SCREEN") {
+        return className + ', ' + probability.toString();
+      } else if (probability >= 0.82 && className == "BIOS SCREEN") {
+        return className + ', ' + probability.toString();
       } else {
         return "None";
       }
     } catch (e) {
       print('Error: $e');
-      return null;
+      return "None";
     }
   }
 }
