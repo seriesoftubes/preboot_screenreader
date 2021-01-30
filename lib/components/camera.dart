@@ -3,6 +3,7 @@ import 'package:camera/camera.dart';
 import 'package:tflite/tflite.dart';
 
 import 'classifier.dart';
+import 'text_to_speech.dart';
 
 class CameraFeed extends StatefulWidget {
   @override
@@ -11,6 +12,7 @@ class CameraFeed extends StatefulWidget {
 
 class _CameraFeedState extends State<CameraFeed> {
   Classifier _classifier;
+  TextToSpeech _tts;
   CameraController cameraController;
   bool isDetecting = false;
   String _prediction = "None";
@@ -73,6 +75,7 @@ class _CameraFeedState extends State<CameraFeed> {
   @override
   void dispose() {
     Tflite.close();
+    _tts.stop();
     super.dispose();
     if (cameraController != null) {
       cameraController.stopImageStream();
@@ -103,6 +106,7 @@ class _CameraFeedState extends State<CameraFeed> {
   /// Initializes the camera views choosing the first camera available.
   void _init() async {
     _classifier = Classifier(); // loads the model.
+    _tts = TextToSpeech(); // initialize text to speech
     try {
       final cameras = await availableCameras();
       if (cameras?.isNotEmpty ?? false) {
@@ -124,6 +128,12 @@ class _CameraFeedState extends State<CameraFeed> {
     setState(() {
       _prediction = prediction;
     });
+
+    if (prediction == "BOOT SCREEN") {
+      _tts.speak("BOOT SCREEN. Press the key to enter BIOS screen.");
+    } else if (prediction == "BIOS SCREEN") {
+      _tts.speak("BIOS SCREEN");
+    }
 
     isDetecting = false;
   }
