@@ -26,6 +26,8 @@ dependencies:
   camera: ^0.6.4+5
   tflite: ^1.1.1
   flutter_tts: ^2.1.0
+  firebase_core: ^0.7.0
+  firebase_ml_vision: ^0.10.0
 
 
   # The following adds the Cupertino Icons font to your application.
