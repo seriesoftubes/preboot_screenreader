@@ -50,9 +50,9 @@ class Classifier {
       print('RECOGNITION: $recognition PROBABILITY: $probability');
 
       // Check if probability condition
-      if (probability >= 0.90 && className == "BOOT SCREEN") {
+      if (probability >= 0.95 && className == "BOOT SCREEN") {
         return className;
-      } else if (probability >= 0.97 && className == "BIOS SCREEN") {
+      } else if (probability >= 0.96 && className == "BIOS SCREEN") {
         return className;
       } else {
         return "None";

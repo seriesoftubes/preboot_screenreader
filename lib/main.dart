@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 Future<void> main() async {
   runApp(
     MaterialApp(
-      title: 'Flutter Demo',
+      title: 'Preboot Screen Reader',
       theme: ThemeData(
         // This is the theme of your application.
         //
