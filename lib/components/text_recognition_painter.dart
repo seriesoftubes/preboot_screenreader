@@ -15,10 +15,14 @@ class TextRecognitionPainter extends CustomPainter {
 
     Rect scaleRect(TextContainer container) {
       return Rect.fromLTRB(
-        container.boundingBox.left * scaleX,
-        container.boundingBox.top * scaleY,
-        container.boundingBox.right * scaleX,
-        container.boundingBox.bottom * scaleY,
+        // The bottom of the bounding box on the image is the left on potrait screen
+        size.width - container.boundingBox.bottom * scaleX,
+        // The left of the bounding box on the image is the top on potrait screen
+        container.boundingBox.left * scaleY,
+        // The top of the bounding box on the image is the right on potrait screen
+        size.width - container.boundingBox.top * scaleX,
+        // The right of the bounding box on the image is the bottom on potrait screen
+        container.boundingBox.right * scaleY,
       );
     }
 

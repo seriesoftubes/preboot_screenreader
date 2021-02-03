@@ -30,7 +30,7 @@ class _CameraFeedState extends State<CameraFeed> {
     }
 
     cameraController =
-        CameraController(cameraDescription, ResolutionPreset.medium);
+        CameraController(cameraDescription, ResolutionPreset.veryHigh);
 
     if (cameraController.value.hasError) {
       print('Camera Error ${cameraController.value.errorDescription}');
@@ -114,19 +114,13 @@ class _CameraFeedState extends State<CameraFeed> {
     return Scaffold(
       backgroundColor: Colors.black,
       body: Container(
-        child: Stack(children: <Widget>[
-          Align(
-            alignment: Alignment.center,
-            child: cameraPreview(),
-          ),
-          Align(
-            alignment: Alignment.center,
-            child: textPainterPreview(),
-          ),
+        child: Stack(fit: StackFit.expand, children: <Widget>[
+          cameraPreview(),
+          textPainterPreview(),
           Align(
             alignment: Alignment.bottomCenter,
             child: predictionText(),
-          ),
+          )
         ]),
       ),
     );
@@ -161,9 +155,13 @@ class _CameraFeedState extends State<CameraFeed> {
       }
     } else {
       if (prediction == "BOOT SCREEN") {
+        visionText = null;
         _tts.speak("BOOT SCREEN. Press the key to enter BIOS screen.");
       } else if (prediction == "BIOS SCREEN") {
+        visionText = await _tr.recognizeText(img);
         _tts.speak("BIOS SCREEN");
+      } else {
+        visionText = null;
       }
     }
 

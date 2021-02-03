@@ -18,7 +18,6 @@ class TextRecognition {
         FirebaseVisionImageMetadata(
           rawFormat: img.format.raw,
           size: Size(img.width.toDouble(), img.height.toDouble()),
-          rotation: ImageRotation.rotation90,
           planeData: img.planes.map((plane) {
             return FirebaseVisionImagePlaneMetadata(
               bytesPerRow: plane.bytesPerRow,
