@@ -32,6 +32,8 @@ class TextRecognitionPainter extends CustomPainter {
 
     for (TextBlock block in visionText.blocks) {
       for (TextLine line in block.lines) {
+        print(line.text);
+        print(line.boundingBox);
         for (TextElement element in line.elements) {
           paint.color = Colors.green;
           canvas.drawRect(scaleRect(element), paint);
