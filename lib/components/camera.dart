@@ -2,6 +2,8 @@ import 'package:firebase_ml_vision/firebase_ml_vision.dart';
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
 import 'package:tflite/tflite.dart';
+import 'package:image/image.dart' as imglib;
+import 'package:native_opencv/native_opencv.dart';
 
 import 'classifier.dart';
 import 'text_recognition.dart';
@@ -147,10 +149,22 @@ class _CameraFeedState extends State<CameraFeed> {
     if (isDetecting) return;
     isDetecting = true;
 
+    // Classify screen
     prediction = await _classifier.classify(img);
 
     if (lastPrediction == prediction) {
       if (lastPrediction == "BIOS SCREEN") {
+        // Convert CameraImage to Image
+        imglib.Image convertedImg = imglib.Image.fromBytes(
+          img.width,
+          img.height,
+          img.planes[0].bytes,
+          format: imglib.Format.bgra,
+        );
+        // Detect Squares
+        List<List<double>> rect_coords =
+            NativeOpencv().detect_squares(convertedImg);
+        // Recognize text
         visionText = await _tr.recognizeText(img);
       }
     } else {
@@ -158,7 +172,19 @@ class _CameraFeedState extends State<CameraFeed> {
         visionText = null;
         _tts.speak("BOOT SCREEN. Press the key to enter BIOS screen.");
       } else if (prediction == "BIOS SCREEN") {
+        // Convert CameraImage to Image
+        imglib.Image convertedImg = imglib.Image.fromBytes(
+          img.width,
+          img.height,
+          img.planes[0].bytes,
+          format: imglib.Format.bgra,
+        );
+        // Detect Squares
+        List<List<double>> rect_coords =
+            NativeOpencv().detect_squares(convertedImg);
+        // Recognize text
         visionText = await _tr.recognizeText(img);
+        // Text to speech
         _tts.speak("BIOS SCREEN");
       } else {
         visionText = null;
