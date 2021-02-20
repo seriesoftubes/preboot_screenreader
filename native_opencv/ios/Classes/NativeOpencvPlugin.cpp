@@ -11,7 +11,7 @@ extern "C"
 	}
 
 	__attribute__((visibility("default"))) __attribute__((used))
-	std::vector<std::vector<double>> detect_squares(cv::Mat* img)
+	std::vector<std::vector<double>> detect_squares(cv::Mat& img)
 	{
 		// Minimum rectangle area
 		double min_area = (img.cols / 3) * (img.rows / 3);
